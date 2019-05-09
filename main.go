@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 
@@ -9,9 +10,14 @@ import (
 )
 
 func main() {
+	val := lookupEnv("ENV", "development")
+	log.Info(val)
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello World! I'm a Gopher!"))
+		p := mux.Vars(r)
+		for key, val := range p {
+			w.Write([]byte("Hello World! I'm a Gopher! Param: %s", p[key]))
+		}
 	})
 
 	log.Info("Running on port 8085")
@@ -19,4 +25,13 @@ func main() {
 	if err := http.ListenAndServe(":8085", r); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func lookupEnv(val, fallback string) string {
+	v, ok := os.LookupEnv(val)
+	if !ok {
+		log.Printf("Error getting env, using: %s", fallback)
+		return fallback
+	}
+	return v
 }

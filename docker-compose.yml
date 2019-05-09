@@ -1,0 +1,12 @@
+version: '3'
+
+services:
+  gopro:
+    build: .
+    image: byrdapp/basic-server
+    volumes:
+      - .:/go/code/basic-server
+    ports:
+      - 8085:8085
+    environment:
+      - ENV=development
