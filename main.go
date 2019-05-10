@@ -15,23 +15,22 @@ import (
 )
 
 var (
-	env          = lookupEnv("ENV", "development")
-	insecurePort = flag.String("insecure-bind", ":80", "host/port to bind on for insecure (HTTP) traffic")
-	securePort   = flag.String("secure-bind", ":443", "host/port to bind on for secure (HTTPS) traffic")
-	sitePort     = flag.String("site-port", "3000", "port to http forward")
-	// siteDomain   = flag.String("site-domain", "git.xeserv.us", "site port")
+	host = flag.String("host", "", "What host are you using?")
 )
 
 func main() {
-
-	startServer()
-}
-
-func startServer() {
+	flag.Parse()
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello!"))
+		w.Write([]byte("Hello from go-pro!"))
 	})
+
+	cm := autocert.Manager{
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(*host),
+		Cache:      autocert.DirCache("/certs"),
+	}
+
 	httpsSrv := &http.Server{
 		ReadTimeout:       5 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -44,29 +43,23 @@ func startServer() {
 				tls.CurveP256,
 				tls.X25519,
 			},
-			// GetCertificate: certManager().GetCertificate,
 		},
-		Handler: r,
-	}
-	err := useHTTP2(httpsSrv)
-	if err != nil {
-		log.Fatal(err)
+		Handler: cm.HTTPHandler(r),
 	}
 
-	if env == "development" {
+	if *host == "" {
 		httpsSrv.Addr = "localhost:8085"
 		log.Printf("Serving on addr: %s", httpsSrv.Addr)
 		log.Fatal(httpsSrv.ListenAndServeTLS("certs/insecure_cert.pem", "certs/insecure_key.pem"))
 	}
-}
 
-func lookupEnv(val, fallback string) string {
-	v, ok := os.LookupEnv(val)
-	if !ok {
-		log.Printf("Error getting env, using: %s", fallback)
-		return fallback
+	err := useHTTP2(httpsSrv)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return v
+	httpsSrv.TLSConfig.GetCertificate = cm.GetCertificate
+	log.Info("Serving on port 443, authenticating for https://", *host)
+	log.Fatal(httpsSrv.ListenAndServeTLS("", ""))
 }
 
 func useHTTP2(httpsSrv *http.Server) error {
@@ -78,11 +71,11 @@ func useHTTP2(httpsSrv *http.Server) error {
 	return nil
 }
 
-func certManager() *autocert.Manager {
-	mng := autocert.Manager{
-		Prompt:     autocert.AcceptTOS,
-		HostPolicy: autocert.HostWhitelist("https://localhost:8085"),
-		// Cache:      autocert.DirCache("./"),
+func lookupEnv(val, fallback string) string {
+	v, ok := os.LookupEnv(val)
+	if !ok {
+		log.Printf("Error getting env, using: %s", fallback)
+		return fallback
 	}
-	return &mng
+	return v
 }
