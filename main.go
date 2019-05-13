@@ -15,17 +15,19 @@ import (
 )
 
 var (
-	host = flag.String("host", "", "What host are you using?")
+	host       = flag.String("host", "", "What host are you using?")
+	production = flag.Bool("production", false, "Is it production?")
 )
 
 func main() {
 	flag.Parse()
+	log.Info(lookupEnv("ENV", "development"))
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello from go-pro!"))
 	})
-
-	cm := autocert.Manager{
+	// Create auto-certificate https server
+	m := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
 		HostPolicy: autocert.HostWhitelist(*host),
 		Cache:      autocert.DirCache("/certs"),
@@ -44,21 +46,36 @@ func main() {
 				tls.X25519,
 			},
 		},
-		Handler: cm.HTTPHandler(r),
+		Handler: m.HTTPHandler(r),
 	}
 
+	// Serve on localhost with localhost certs if no host provided
 	if *host == "" {
 		httpsSrv.Addr = "localhost:8085"
-		log.Printf("Serving on addr: %s", httpsSrv.Addr)
-		log.Fatal(httpsSrv.ListenAndServeTLS("certs/insecure_cert.pem", "certs/insecure_key.pem"))
+		log.Info("Serving on http://localhost:8085")
+		// log.Fatal(httpsSrv.ListenAndServeTLS("./certs/insecure_cert.pem", "./certs/insecure_key.pem"))
+		log.Fatal(httpsSrv.ListenAndServe())
 	}
 
-	err := useHTTP2(httpsSrv)
-	if err != nil {
-		log.Fatal(err)
+	// Create server for redirecting HTTP to HTTPS
+	httpSrv := &http.Server{
+		Addr:         ":http",
+		ReadTimeout:  httpsSrv.ReadTimeout,
+		WriteTimeout: httpsSrv.WriteTimeout,
+		IdleTimeout:  httpsSrv.IdleTimeout,
+		Handler:      m.HTTPHandler(r),
 	}
-	httpsSrv.TLSConfig.GetCertificate = cm.GetCertificate
-	log.Info("Serving on port 443, authenticating for https://", *host)
+
+	if err := useHTTP2(httpsSrv); err != nil {
+		log.Warnf("Error with HTTP2 %s", err)
+	}
+
+	go func() {
+		log.Fatal(httpSrv.ListenAndServe())
+	}()
+
+	httpsSrv.TLSConfig.GetCertificate = m.GetCertificate
+	log.Info("Serving on https://0.0.0.0:443, authenticating for https://", *host)
 	log.Fatal(httpsSrv.ListenAndServeTLS("", ""))
 }
 
