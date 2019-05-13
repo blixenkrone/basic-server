@@ -12,5 +12,7 @@ services:
     restart: always
     environment:
       - ENV=development
+    volumes:
+      - "certs:/certs"
     command:
       - "-production=false"

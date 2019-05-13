@@ -21,11 +21,11 @@ var (
 
 func main() {
 	flag.Parse()
-	log.Info(lookupEnv("ENV", "development"))
 	r := mux.NewRouter()
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("Hello from go-pro!"))
 	})
+
 	// Create auto-certificate https server
 	m := autocert.Manager{
 		Prompt:     autocert.AcceptTOS,
@@ -34,8 +34,8 @@ func main() {
 	}
 
 	httpsSrv := &http.Server{
-		ReadTimeout:       5 * time.Second,
-		WriteTimeout:      10 * time.Second,
+		// ReadTimeout:       5 * time.Second,
+		// WriteTimeout:      10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
 		IdleTimeout:       120 * time.Second,
 		Addr:              ":https",
@@ -66,9 +66,9 @@ func main() {
 		Handler:      m.HTTPHandler(nil),
 	}
 
-	if err := useHTTP2(httpsSrv); err != nil {
-		log.Warnf("Error with HTTP2 %s", err)
-	}
+	// if err := useHTTP2(httpsSrv); err != nil {
+	// 	log.Warnf("Error with HTTP2 %s", err)
+	// }
 
 	go func() {
 		log.Fatal(httpSrv.ListenAndServe())
