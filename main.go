@@ -46,7 +46,7 @@ func main() {
 				tls.X25519,
 			},
 		},
-		Handler: m.HTTPHandler(r),
+		Handler: r,
 	}
 
 	// Serve on localhost with localhost certs if no host provided
@@ -63,7 +63,7 @@ func main() {
 		ReadTimeout:  httpsSrv.ReadTimeout,
 		WriteTimeout: httpsSrv.WriteTimeout,
 		IdleTimeout:  httpsSrv.IdleTimeout,
-		Handler:      m.HTTPHandler(r),
+		Handler:      m.HTTPHandler(nil),
 	}
 
 	if err := useHTTP2(httpsSrv); err != nil {
@@ -75,7 +75,7 @@ func main() {
 	}()
 
 	httpsSrv.TLSConfig.GetCertificate = m.GetCertificate
-	log.Info("Serving on https://0.0.0.0:443, authenticating for https://", *host)
+	log.Info("Serving on https, authenticating for https://", *host)
 	log.Fatal(httpsSrv.ListenAndServeTLS("", ""))
 }
 

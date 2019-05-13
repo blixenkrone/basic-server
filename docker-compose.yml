@@ -7,7 +7,10 @@ services:
     image: byrdapp/basic-server
     ports:
       - "443:443"
+      - "8085:443"
       - "80:80"
     restart: always
     environment:
       - ENV=development
+    command:
+      - "-production=false"
