@@ -3,7 +3,7 @@ module github.com/byblix/basic-server
 go 1.12
 
 require (
-	github.com/gorilla/mux v1.7.1
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/sirupsen/logrus v1.4.1
 	github.com/stretchr/testify v1.3.0 // indirect

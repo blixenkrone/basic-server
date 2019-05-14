@@ -12,6 +12,7 @@ services:
     restart: always
     environment:
       - ENV=development
+      - JWT_SECRET=givemeallthepros
     volumes:
       - "certs:/certs"
     command:
